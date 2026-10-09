@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WAREHOUSE CONTROL - Inventory & Stock Management System</title>
+    <title>WAREHOUSE CONTROL - Inventory & Stock Management System with Supabase</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts Inter -->
@@ -17,6 +17,8 @@
     <!-- jsPDF for PDF Export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <!-- Supabase JS Client UMD -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -59,7 +61,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-lg leading-tight tracking-wide text-white">Re2-WAREHOUSE</h1>
-                    <p class="text-[10px] text-cyan-100 font-medium tracking-wider uppercase">OFFLINE-FIRST SYNC</p>
+                    <p class="text-[10px] text-cyan-100 font-medium tracking-wider uppercase">SUPABASE SYNC</p>
                 </div>
             </div>
         </div>
@@ -107,7 +109,7 @@
             <div class="pt-2"></div>
             <button onclick="switchTab('pengaturan')" id="nav-pengaturan" class="nav-item w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all text-slate-300 hover:bg-slate-800 hover:text-white">
                 <i data-lucide="settings" class="w-4 h-4 text-slate-400"></i>
-                <span>Pengaturan & PIN</span>
+                <span>Pengaturan & Supabase</span>
             </button>
         </nav>
 
@@ -115,12 +117,12 @@
             <div id="syncStatusIndicator" class="flex items-center justify-between">
                 <span class="flex items-center gap-1.5 text-emerald-400 font-medium">
                     <span id="syncDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 
-                    <span id="syncText">Online (Tersinkron)</span>
+                    <span id="syncText">Supabase Connected</span>
                 </span>
                 <span id="pendingBadge" class="hidden px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 text-[10px] font-bold">0 Pending</span>
             </div>
             <button onclick="triggerManualSync()" class="w-full py-1.5 bg-slate-800 hover:bg-slate-700 rounded-lg text-slate-200 text-xs font-medium flex items-center justify-center gap-1.5 transition">
-                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Paksa Sinkronisasi
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Refresh Supabase Sync
             </button>
         </div>
     </aside>
@@ -136,7 +138,7 @@
                 <div>
                     <h2 class="font-bold text-slate-800 text-base md:text-lg flex items-center gap-2">
                         <span>WAREHOUSE CONTROL</span>
-                        <span id="headerSyncBadge" class="hidden sm:inline-block text-[11px] font-normal text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">Menunggu Koneksi</span>
+                        <span id="headerSyncBadge" class="hidden sm:inline-block text-[11px] font-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">Supabase Connected</span>
                     </h2>
                 </div>
             </div>
@@ -158,11 +160,11 @@
         <!-- CONTENT AREA -->
         <main class="flex-1 overflow-y-auto p-4 md:p-6 pb-24 md:pb-8 bg-slate-50">
             
-            <!-- OFFLINE NOTIFICATION BANNER -->
+            <!-- OFFLINE / SYNC BANNER -->
             <div id="offlineBanner" class="hidden mb-5 p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center justify-between text-xs md:text-sm shadow-sm transition-all">
                 <div class="flex items-center gap-2.5">
                     <i data-lucide="wifi-off" class="w-5 h-5 text-amber-600 shrink-0"></i>
-                    <div><span class="font-bold">Mode Offline Aktif:</span> Anda dapat tetap menginput data & transaksi. Data disimpan aman di perangkat dan otomatis terkirim saat internet nyala kembali.</div>
+                    <div><span class="font-bold">Mode Offline:</span> Perubahan disimpan di perangkat dan akan disinkronkan ke Supabase begitu terhubung kembali.</div>
                 </div>
                 <div id="offlineCountBadge" class="px-2.5 py-1 bg-amber-200 text-amber-900 font-bold rounded-lg text-xs">0 Pending</div>
             </div>
@@ -171,7 +173,7 @@
             <div id="readOnlyBanner" class="mb-5 p-3.5 rounded-xl bg-sky-50 border border-sky-200 text-sky-900 flex items-center justify-between text-xs md:text-sm shadow-sm">
                 <div class="flex items-center gap-2.5">
                     <i data-lucide="info" class="w-5 h-5 text-sky-600 shrink-0"></i>
-                    <div><span class="font-bold">Mode Viewer:</span> Anda dapat melihat laporan seluruh perangkat. Untuk input/edit data, masukkan PIN Admin/Operator.</div>
+                    <div><span class="font-bold">Mode Viewer:</span> Anda dapat melihat laporan. Untuk input/edit data, masukkan PIN Admin/Operator.</div>
                 </div>
                 <button onclick="promptRoleChange('ADMIN')" class="px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-lg shrink-0 transition flex items-center gap-1 shadow-sm">
                     <i data-lucide="key-round" class="w-3.5 h-3.5"></i> Unlock PIN
@@ -194,8 +196,8 @@
             <section id="tab-dashboard" class="tab-content space-y-6">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-sky-900 via-sky-800 to-cyan-800 p-6 rounded-2xl text-white shadow-lg relative overflow-hidden">
                     <div class="space-y-1 z-10">
-                        <h2 class="text-xl md:text-2xl font-bold">Warehouse Control PT.SWASA 🚀</h2>
-                        <p class="text-xs md:text-sm text-cyan-100 opacity-90">Sinkronisasi offline-first otomatis. Tetap bisa input transaksi walau tanpa sinyal, langsung sinkron begitu online.</p>
+                        <h2 class="text-xl md:text-2xl font-bold">Warehouse Control Supabase 🚀</h2>
+                        <p class="text-xs md:text-sm text-cyan-100 opacity-90">Terhubung langsung dengan database cloud Supabase dengan fitur sinkronisasi otomatis.</p>
                     </div>
                     <div class="flex items-center gap-2 z-10">
                         <button onclick="protectedAction(() => openModal('modalMasuk'))" class="gradient-btn px-4 py-2.5 rounded-xl text-xs md:text-sm font-medium flex items-center gap-2 text-white shadow">
@@ -238,7 +240,7 @@
                     </div>
                     <div onclick="switchTab('laporan-stok')" class="glass-card p-4 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition cursor-pointer col-span-2 lg:col-span-1 group">
                         <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold text-slate-500 uppercase">⚠️️ Menipis</span>
+                            <span class="text-xs font-semibold text-slate-500 uppercase">⚠ Menipis</span>
                             <div class="p-2 bg-rose-50 text-rose-600 rounded-xl group-hover:scale-110 transition"><i data-lucide="alert-circle" class="w-5 h-5"></i></div>
                         </div>
                         <div class="text-2xl font-bold text-rose-600" id="dashStokMenipis">0</div>
@@ -280,7 +282,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
                     <div>
                         <h3 class="font-bold text-slate-800 text-base">Manajemen Data Barang</h3>
-                        <p class="text-xs text-slate-500">Daftar seluruh item master yang tercatat dalam gudang.</p>
+                        <p class="text-xs text-slate-500">Daftar seluruh item master yang tercatat dalam database Supabase.</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <button onclick="protectedAction(() => openModal('modalBarangBaru'))" class="gradient-btn px-3.5 py-2 rounded-xl text-xs font-medium text-white flex items-center gap-1.5 shadow">
@@ -513,14 +515,31 @@
                 </div>
             </section>
 
-            <!-- TAB 7: PENGATURAN & PIN -->
+            <!-- TAB 7: PENGATURAN & SUPABASE CONFIG -->
             <section id="tab-pengaturan" class="tab-content hidden space-y-6">
-                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-5">
+                <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm max-w-xl mx-auto space-y-6">
                     <div>
-                        <h3 class="font-bold text-slate-800 text-lg">Keamanan & PIN Akses Gudang</h3>
-                        <p class="text-xs text-slate-500 mt-1">Ubah PIN Akses untuk Operator dan Admin agar data gudang tetap terlindungi dari akses sembarangan.</p>
+                        <h3 class="font-bold text-slate-800 text-lg">Konfigurasi Supabase & PIN Akses</h3>
+                        <p class="text-xs text-slate-500 mt-1">Masukkan URL dan Anon Key Supabase Anda agar aplikasi terhubung secara real-time ke cloud database.</p>
                     </div>
+
+                    <div class="space-y-4 p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            <i data-lucide="database" class="w-4 h-4 text-sky-600"></i> <span>Supabase Credentials</span>
+                        </h4>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Supabase Project URL</label>
+                            <input type="text" id="inputSupabaseUrl" class="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono" placeholder="https://xyzproject.supabase.co">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Supabase Anon Key</label>
+                            <input type="password" id="inputSupabaseKey" class="w-full px-3.5 py-2 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                        </div>
+                        <button onclick="saveSupabaseConfig()" class="w-full py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold shadow">Simpan & Hubungkan Supabase</button>
+                    </div>
+
                     <div class="space-y-4 pt-2">
+                        <h4 class="font-bold text-slate-800 text-sm">Keamanan & PIN Akses Gudang</h4>
                         <div>
                             <label class="block text-xs font-semibold text-slate-700 mb-1">PIN Operator (Untuk Input Transaksi)</label>
                             <input type="password" id="inputPinOperator" maxlength="6" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Contoh: 1234">
@@ -530,15 +549,6 @@
                             <input type="password" id="inputPinAdmin" maxlength="6" class="w-full px-3.5 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-500" placeholder="Contoh: 8888">
                         </div>
                         <button onclick="savePinSettings()" class="w-full gradient-btn py-2.5 rounded-xl text-sm font-semibold text-white shadow">Simpan Perubahan PIN</button>
-                    </div>
-
-                    <div class="pt-4 border-t border-slate-100 space-y-3">
-                        <h4 class="font-bold text-slate-800 text-sm">Status Sinkronisasi & Penyimpanan Offline</h4>
-                        <div class="p-3 bg-slate-50 rounded-xl text-xs space-y-1.5 border border-slate-200">
-                            <div class="flex justify-between"><span>Sistem Offline Queue:</span> <span id="settingQueueCount" class="font-bold text-slate-700">0 Antrian</span></div>
-                            <div class="flex justify-between"><span>Status Koneksi:</span> <span id="settingOnlineStatus" class="font-bold text-emerald-600">Online</span></div>
-                        </div>
-                        <button onclick="triggerManualSync()" class="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-medium hover:bg-slate-800 transition">Paksa Sinkronisasi Sekarang</button>
                     </div>
                 </div>
             </section>
@@ -679,8 +689,23 @@
     </div>
 
     <script>
+        // Supabase configuration variables (bisa diubah lewat tab Pengaturan)
+        let SUPABASE_URL = localStorage.getItem('supabase_url') || 'https://YOUR_SUPABASE_PROJECT.supabase.co';
+        let SUPABASE_ANON_KEY = localStorage.getItem('supabase_anon_key') || 'YOUR_SUPABASE_ANON_KEY';
+        let supabaseClient = null;
+
+        function initSupabase() {
+            try {
+                if (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_URL !== 'https://YOUR_SUPABASE_PROJECT.supabase.co') {
+                    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                }
+            } catch (e) {
+                console.warn("Supabase init warning:", e);
+            }
+        }
+
         let db;
-        const DB_NAME = 'Re2WarehouseOfflineDB';
+        const DB_NAME = 'Re2WarehouseSupabaseOfflineDB';
         const DB_VERSION = 1;
         
         let appState = {
@@ -753,13 +778,96 @@
             }
         }
 
+        // Sinkronisasi data ke Supabase Cloud
+        async function fetchFromSupabase() {
+            if (!supabaseClient) return false;
+            try {
+                // Fetch tabel 'barang' dari Supabase
+                const { data: remoteBarang, error: errBarang } = await supabaseClient.from('barang').select('*');
+                if (!errBarang && remoteBarang && remoteBarang.length > 0) {
+                    for (let item of remoteBarang) {
+                        await dbTransaction('barang', 'readwrite', (store) => store.put({
+                            kode: item.kode,
+                            nama: item.nama,
+                            kategori: item.kategori,
+                            stok: Number(item.stok),
+                            minStok: Number(item.min_stok || item.minStok || 5),
+                            satuan: item.satuan || 'Pcs'
+                        }));
+                    }
+                }
+
+                // Fetch tabel 'transaksi' dari Supabase
+                const { data: remoteTx, error: errTx } = await supabaseClient.from('transaksi').select('*');
+                if (!errTx && remoteTx && remoteTx.length > 0) {
+                    for (let t of remoteTx) {
+                        await dbTransaction('transaksi', 'readwrite', (store) => store.put({
+                            id: t.id_legacy || t.id,
+                            waktu: t.waktu,
+                            tipe: t.tipe,
+                            kodeBarang: t.kode_barang || t.kodeBarang,
+                            namaBarang: t.nama_barang || t.namaBarang,
+                            qty: Number(t.qty),
+                            ref: t.ref,
+                            ket: t.ket
+                        }));
+                    }
+                }
+                return true;
+            } catch (e) {
+                console.error("Supabase fetch error:", e);
+                return false;
+            }
+        }
+
+        async function syncQueueToSupabase() {
+            if (!supabaseClient || !navigator.onLine) return;
+            try {
+                const queue = await dbTransaction('offlineQueue', 'readonly', (store) => store.getAll());
+                if (queue.length === 0) return;
+
+                for (let item of queue) {
+                    if (item.actionType === 'ADD_BARANG' || item.actionType === 'UPDATE_BARANG') {
+                        await supabaseClient.from('barang').upsert({
+                            kode: item.payload.kode,
+                            nama: item.payload.nama,
+                            kategori: item.payload.kategori,
+                            stok: item.payload.stok,
+                            min_stok: item.payload.minStok,
+                            satuan: item.payload.satuan
+                        }, { onConflict: 'kode' });
+                    } else if (item.actionType === 'BARANG_MASUK' || item.actionType === 'BARANG_KELUAR') {
+                        await supabaseClient.from('transaksi').insert({
+                            waktu: item.payload.waktu,
+                            tipe: item.payload.tipe,
+                            kode_barang: item.payload.kodeBarang,
+                            nama_barang: item.payload.namaBarang,
+                            qty: item.payload.qty,
+                            ref: item.payload.ref,
+                            ket: item.payload.ket
+                        });
+                        // Update stok di supabase
+                        const barangList = await dbTransaction('barang', 'readonly', (store) => store.getAll());
+                        const b = barangList.find(x => x.kode === item.payload.kodeBarang);
+                        if (b) {
+                            await supabaseClient.from('barang').update({ stok: b.stok }).eq('kode', b.kode);
+                        }
+                    }
+                    await dbTransaction('offlineQueue', 'readwrite', (store) => store.delete(item.id));
+                }
+                updateOfflineBadge();
+            } catch (e) {
+                console.error("Queue sync error:", e);
+            }
+        }
+
         async function queueAction(actionType, payload) {
-            const queueItem = {
-                actionType,
-                payload,
-                timestamp: new Date().toISOString()
-            };
+            const queueItem = { actionType, payload, timestamp: new Date().toISOString() };
             await dbTransaction('offlineQueue', 'readwrite', (store) => store.add(queueItem));
+            
+            if (supabaseClient && navigator.onLine) {
+                await syncQueueToSupabase();
+            }
             updateOfflineBadge();
         }
 
@@ -777,21 +885,19 @@
             const badge = document.getElementById('pendingBadge');
             const offlineBanner = document.getElementById('offlineBanner');
             const offlineCountBadge = document.getElementById('offlineCountBadge');
-            const settingQueueCount = document.getElementById('settingQueueCount');
             const headerSyncBadge = document.getElementById('headerSyncBadge');
 
-            if (settingQueueCount) settingQueueCount.innerText = count + ' Antrian';
             if (offlineCountBadge) offlineCountBadge.innerText = count + ' Pending';
 
-            if (!navigator.onLine) {
+            if (!navigator.onLine || !supabaseClient) {
                 if (offlineBanner) offlineBanner.classList.remove('hidden');
                 if (badge) {
                     badge.classList.remove('hidden');
-                    badge.innerText = count + ' Pending (Offline)';
+                    badge.innerText = count + ' Pending (Lokal)';
                 }
                 if (headerSyncBadge) {
                     headerSyncBadge.classList.remove('hidden');
-                    headerSyncBadge.innerText = 'Mode Offline (Tersimpan Lokal)';
+                    headerSyncBadge.innerText = 'Mode Lokal/Offline';
                     headerSyncBadge.className = "hidden sm:inline-block text-[11px] font-normal text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200";
                 }
             } else {
@@ -803,63 +909,48 @@
                     }
                     if (headerSyncBadge) {
                         headerSyncBadge.classList.remove('hidden');
-                        headerSyncBadge.innerText = 'Mengirim Data (' + count + ')...';
+                        headerSyncBadge.innerText = 'Supabase Sync (' + count + ')...';
                         headerSyncBadge.className = "hidden sm:inline-block text-[11px] font-normal text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200 animate-pulse";
                     }
                 } else {
                     if (badge) badge.classList.add('hidden');
                     if (headerSyncBadge) {
-                        headerSyncBadge.classList.add('hidden');
+                        headerSyncBadge.classList.remove('hidden');
+                        headerSyncBadge.innerText = 'Supabase Connected';
+                        headerSyncBadge.className = "hidden sm:inline-block text-[11px] font-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200";
                     }
                 }
             }
         }
 
-        async function processOfflineQueue() {
-            if (!navigator.onLine) return;
-            const queue = await dbTransaction('offlineQueue', 'readonly', (store) => store.getAll());
-            if (queue.length === 0) return;
-
-            showToast('info', 'Terhubung kembali! Mengirim ' + queue.length + ' data offline secara otomatis...');
-            
-            for (let item of queue) {
-                await new Promise(r => setTimeout(r, 600));
-                await dbTransaction('offlineQueue', 'readwrite', (store) => store.delete(item.id));
-            }
-
-            showToast('success', 'Semua data offline berhasil disinkronkan ke server!');
-            updateOfflineBadge();
-            refreshAllDataViews();
-        }
-
-        window.addEventListener('online', () => {
-            document.getElementById('syncText').innerText = 'Online (Tersinkron)';
+        window.addEventListener('online', async () => {
+            document.getElementById('syncText').innerText = 'Supabase Connected';
             document.getElementById('syncDot').className = 'w-2 h-2 rounded-full bg-emerald-400 animate-pulse';
-            if (document.getElementById('settingOnlineStatus')) {
-                document.getElementById('settingOnlineStatus').innerText = 'Online';
-                document.getElementById('settingOnlineStatus').className = 'font-bold text-emerald-600';
-            }
-            processOfflineQueue();
+            await syncQueueToSupabase();
+            await fetchFromSupabase();
+            refreshAllDataViews();
         });
 
         window.addEventListener('offline', () => {
             document.getElementById('syncText').innerText = 'Offline (Lokal)';
             document.getElementById('syncDot').className = 'w-2 h-2 rounded-full bg-amber-400';
-            if (document.getElementById('settingOnlineStatus')) {
-                document.getElementById('settingOnlineStatus').innerText = 'Offline (Tersimpan di Perangkat)';
-                document.getElementById('settingOnlineStatus').className = 'font-bold text-amber-600';
-            }
             updateOfflineBadge();
         });
 
-        function triggerManualSync() {
+        async function triggerManualSync() {
             if (!navigator.onLine) {
-                showToast('error', 'Tidak ada koneksi internet. Data tersimpan aman di perangkat.');
+                showToast('error', 'Tidak ada koneksi internet.');
                 return;
             }
-            processOfflineQueue();
+            if (!supabaseClient) {
+                showToast('error', 'Konfigurasi Supabase belum disetel di menu Pengaturan.');
+                return;
+            }
+            showToast('info', 'Menyinkronkan dengan Supabase...');
+            await syncQueueToSupabase();
+            await fetchFromSupabase();
             refreshAllDataViews();
-            showToast('success', 'Sinkronisasi berhasil direfresh!');
+            showToast('success', 'Sinkronisasi Supabase berhasil!');
         }
 
         function switchTab(tabId) {
@@ -958,6 +1049,9 @@
 
         async function refreshAllDataViews() {
             try {
+                if (supabaseClient && navigator.onLine) {
+                    await fetchFromSupabase();
+                }
                 const barangList = await dbTransaction('barang', 'readonly', (store) => store.getAll());
                 const transaksiList = await dbTransaction('transaksi', 'readonly', (store) => store.getAll());
                 
@@ -1128,7 +1222,6 @@
             document.getElementById('reportTotalQty').innerText = totalQty;
             document.getElementById('reportTotalMin').innerText = totalMin;
 
-            // 1. Rekap Stok Table
             const stockTbody = document.getElementById('reportStockTableBody');
             stockTbody.innerHTML = barangList.map((item, idx) => {
                 const isMin = Number(item.stok) <= Number(item.minStok);
@@ -1147,41 +1240,31 @@
                 `;
             }).join('');
 
-            // 2. Data Barang Masuk Table
             const masukTbody = document.getElementById('reportMasukTableBody');
             const masukList = transaksiList.filter(t => t.tipe === 'MASUK');
-            if (masukList.length === 0) {
-                masukTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400">Belum ada data barang masuk.</td></tr>`;
-            } else {
-                masukTbody.innerHTML = masukList.map(t => `
-                    <tr class="hover:bg-slate-50 transition">
-                        <td class="p-3 text-slate-500">${new Date(t.waktu).toLocaleString('id-ID')}</td>
-                        <td class="p-3 font-mono font-bold text-slate-700">${t.kodeBarang}</td>
-                        <td class="p-3 font-semibold text-slate-800">${t.namaBarang}</td>
-                        <td class="p-3 text-center font-bold text-emerald-600">+${t.qty}</td>
-                        <td class="p-3 text-slate-700">${t.ref}</td>
-                        <td class="p-3 text-slate-500">${t.ket || '-'}</td>
-                    </tr>
-                `).join('');
-            }
+            masukTbody.innerHTML = masukList.length === 0 ? `<tr><td colspan="6" class="text-center py-4 text-slate-400">Belum ada data barang masuk.</td></tr>` : masukList.map(t => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3 text-slate-500">${new Date(t.waktu).toLocaleString('id-ID')}</td>
+                    <td class="p-3 font-mono font-bold text-slate-700">${t.kodeBarang}</td>
+                    <td class="p-3 font-semibold text-slate-800">${t.namaBarang}</td>
+                    <td class="p-3 text-center font-bold text-emerald-600">+${t.qty}</td>
+                    <td class="p-3 text-slate-700">${t.ref}</td>
+                    <td class="p-3 text-slate-500">${t.ket || '-'}</td>
+                </tr>
+            `).join('');
 
-            // 3. Data Barang Keluar Table
             const keluarTbody = document.getElementById('reportKeluarTableBody');
             const keluarList = transaksiList.filter(t => t.tipe === 'KELUAR');
-            if (keluarList.length === 0) {
-                keluarTbody.innerHTML = `<tr><td colspan="6" class="text-center py-4 text-slate-400">Belum ada data barang keluar.</td></tr>`;
-            } else {
-                keluarTbody.innerHTML = keluarList.map(t => `
-                    <tr class="hover:bg-slate-50 transition">
-                        <td class="p-3 text-slate-500">${new Date(t.waktu).toLocaleString('id-ID')}</td>
-                        <td class="p-3 font-mono font-bold text-slate-700">${t.kodeBarang}</td>
-                        <td class="p-3 font-semibold text-slate-800">${t.namaBarang}</td>
-                        <td class="p-3 text-center font-bold text-amber-600">-${t.qty}</td>
-                        <td class="p-3 text-slate-700">${t.ref}</td>
-                        <td class="p-3 text-slate-500">${t.ket || '-'}</td>
-                    </tr>
-                `).join('');
-            }
+            keluarTbody.innerHTML = keluarList.length === 0 ? `<tr><td colspan="6" class="text-center py-4 text-slate-400">Belum ada data barang keluar.</td></tr>` : keluarList.map(t => `
+                <tr class="hover:bg-slate-50 transition">
+                    <td class="p-3 text-slate-500">${new Date(t.waktu).toLocaleString('id-ID')}</td>
+                    <td class="p-3 font-mono font-bold text-slate-700">${t.kodeBarang}</td>
+                    <td class="p-3 font-semibold text-slate-800">${t.namaBarang}</td>
+                    <td class="p-3 text-center font-bold text-amber-600">-${t.qty}</td>
+                    <td class="p-3 text-slate-700">${t.ref}</td>
+                    <td class="p-3 text-slate-500">${t.ket || '-'}</td>
+                </tr>
+            `).join('');
         }
 
         function populateBarangSelects(barangList) {
@@ -1215,7 +1298,7 @@
                 closeModal('modalBarangBaru');
                 document.getElementById('formBarangBaru').reset();
                 refreshAllDataViews();
-                showToast('success', 'Barang baru berhasil disimpan!');
+                showToast('success', 'Barang baru berhasil disimpan & disinkronkan!');
             } catch (err) {
                 showToast('error', 'Gagal menyimpan barang: ' + err.message);
             }
@@ -1305,6 +1388,9 @@
             }
             if (confirm('Yakin ingin menghapus master barang ' + kode + '?')) {
                 await dbTransaction('barang', 'readwrite', (store) => store.delete(kode));
+                if (supabaseClient && navigator.onLine) {
+                    await supabaseClient.from('barang').delete().eq('kode', kode);
+                }
                 refreshAllDataViews();
                 showToast('success', 'Barang berhasil dihapus.');
             }
@@ -1317,18 +1403,19 @@
             }
             if (confirm('Yakin ingin menghapus riwayat transaksi ini?')) {
                 await dbTransaction('transaksi', 'readwrite', (store) => store.delete(id));
+                if (supabaseClient && navigator.onLine) {
+                    await supabaseClient.from('transaksi').delete().eq('id', id);
+                }
                 refreshAllDataViews();
                 showToast('success', 'Riwayat transaksi dihapus.');
             }
         }
 
-        // Fungsi Export Excel Bersamaan (Multi-Sheet: Rekap Stok, Barang Masuk, Barang Keluar)
         async function exportCombinedExcel() {
             try {
                 const barangList = await dbTransaction('barang', 'readonly', (store) => store.getAll());
                 const transaksiList = await dbTransaction('transaksi', 'readonly', (store) => store.getAll());
 
-                // Sheet 1: Rekap Stok
                 const wsStokData = barangList.map(item => ({
                     'Kode Barang': item.kode,
                     'Nama Barang': item.nama,
@@ -1340,7 +1427,6 @@
                 }));
                 const wsStok = XLSX.utils.json_to_sheet(wsStokData);
 
-                // Sheet 2: Barang Masuk
                 const masukList = transaksiList.filter(t => t.tipe === 'MASUK');
                 const wsMasukData = masukList.map(t => ({
                     'Waktu': new Date(t.waktu).toLocaleString('id-ID'),
@@ -1352,7 +1438,6 @@
                 }));
                 const wsMasuk = XLSX.utils.json_to_sheet(wsMasukData.length > 0 ? wsMasukData : [{ 'Info': 'Tidak ada data barang masuk' }]);
 
-                // Sheet 3: Barang Keluar
                 const keluarList = transaksiList.filter(t => t.tipe === 'KELUAR');
                 const wsKeluarData = keluarList.map(t => ({
                     'Waktu': new Date(t.waktu).toLocaleString('id-ID'),
@@ -1364,15 +1449,13 @@
                 }));
                 const wsKeluar = XLSX.utils.json_to_sheet(wsKeluarData.length > 0 ? wsKeluarData : [{ 'Info': 'Tidak ada data barang keluar' }]);
 
-                // Buat Workbook baru dan gabungkan sheets
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, wsStok, "Rekap Stok");
                 XLSX.utils.book_append_sheet(wb, wsMasuk, "Barang Masuk");
                 XLSX.utils.book_append_sheet(wb, wsKeluar, "Barang Keluar");
 
-                // Download file Excel
-                XLSX.writeFile(wb, 'Laporan_Lengkap_Gudang_' + new Date().toISOString().slice(0, 10) + '.xlsx');
-                showToast('success', 'File Excel Laporan Lengkap (3 Sheet) berhasil diexport bersamaan!');
+                XLSX.writeFile(wb, 'Laporan_Supabase_Gudang_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+                showToast('success', 'File Excel Laporan Lengkap berhasil diexport!');
             } catch (err) {
                 showToast('error', 'Gagal export Excel: ' + err.message);
             }
@@ -1383,7 +1466,7 @@
             const doc = new jsPDF();
             
             doc.setFontSize(16);
-            doc.text("Laporan Stok Gudang - PT. SWASA", 14, 20);
+            doc.text("Laporan Stok Gudang Supabase", 14, 20);
             doc.setFontSize(10);
             doc.text("Tanggal Cetak: " + new Date().toLocaleString('id-ID'), 14, 26);
 
@@ -1406,7 +1489,7 @@
                 headStyles: { fillColor: [7, 89, 133] }
             });
 
-            doc.save('Laporan_Stok_Gudang_' + new Date().toISOString().slice(0, 10) + '.pdf');
+            doc.save('Laporan_Stok_Supabase_' + new Date().toISOString().slice(0, 10) + '.pdf');
             showToast('success', 'Laporan PDF berhasil dicetak!');
         }
 
@@ -1425,8 +1508,24 @@
             const ws = XLSX.utils.json_to_sheet(wsData);
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, "Riwayat Transaksi");
-            XLSX.writeFile(wb, 'Riwayat_Transaksi_Gudang_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+            XLSX.writeFile(wb, 'Riwayat_Supabase_Gudang_' + new Date().toISOString().slice(0, 10) + '.xlsx');
             showToast('success', 'File Excel Riwayat berhasil diexport!');
+        }
+
+        function saveSupabaseConfig() {
+            const url = document.getElementById('inputSupabaseUrl').value.trim();
+            const key = document.getElementById('inputSupabaseKey').value.trim();
+            if (url && key) {
+                localStorage.setItem('supabase_url', url);
+                localStorage.setItem('supabase_anon_key', key);
+                SUPABASE_URL = url;
+                SUPABASE_ANON_KEY = key;
+                initSupabase();
+                showToast('success', 'Konfigurasi Supabase berhasil disimpan!');
+                triggerManualSync();
+            } else {
+                showToast('error', 'URL dan Anon Key harus diisi dengan benar.');
+            }
         }
 
         function savePinSettings() {
@@ -1468,15 +1567,24 @@
 
         window.onload = async () => {
             try {
+                if (localStorage.getItem('supabase_url')) {
+                    document.getElementById('inputSupabaseUrl').value = localStorage.getItem('supabase_url');
+                }
+                if (localStorage.getItem('supabase_anon_key')) {
+                    document.getElementById('inputSupabaseKey').value = localStorage.getItem('supabase_anon_key');
+                }
+
+                initSupabase();
                 await initIndexedDB();
                 await seedInitialDataIfNeeded();
+                
+                if (supabaseClient && navigator.onLine) {
+                    await fetchFromSupabase();
+                }
+
                 await refreshAllDataViews();
                 updateOfflineBadge();
                 lucide.createIcons();
-                
-                if (navigator.onLine) {
-                    processOfflineQueue();
-                }
             } catch (err) {
                 console.error("Initialization error:", err);
             }
